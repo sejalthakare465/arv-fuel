@@ -1,0 +1,317 @@
+{% extends 'core/home.html' %}
+{% block content %}
+<!-- Background: light baby-blue tint + same paper texture -->
+<div class="fixed inset-0 bg-sky-50 dark:bg-slate-900 -z-10"></div>
+<img src="https://www.transparenttextures.com/patterns/handmade-paper.png" class="fixed inset-0 opacity-30 pointer-events-none z-0" alt="Paper texture backdrop">
+
+<!-- Logout Button -->
+<form method="post" action="{% url 'logout' %}" class="fixed top-4 right-4 z-50">
+    {% csrf_token %}
+    <button type="submit" class="sketch-border bg-white/90 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-4 py-2 handwritten text-sm font-bold shadow-md hover:bg-gray-100 dark:hover:bg-slate-700 transition-all cursor-pointer">
+        🚪 Logout
+    </button>
+</form>
+
+<div class="relative z-10 container mx-auto px-4 mt-6 mb-16">
+    
+    <!-- Header Section -->
+    <div class="text-center mb-10">
+        <h1 class="text-5xl handwritten text-gray-800 dark:text-sky-300 font-bold">
+            Doctor's Command Center 🩺
+        </h1>
+        <p class="handwritten text-2xl text-sky-600 dark:text-sky-300 mt-2 italic">
+            "Monitoring strength, one patient at a time!" 
+        </p>
+        <span class="inline-block mt-2 bg-sky-100 dark:bg-slate-700 text-sky-800 dark:text-sky-300 text-sm handwritten px-4 py-1 sketch-border">
+            Let's check in on everyone today! ✨
+        </span>
+    </div>
+
+    <div id="alert-banner" class="mb-8">
+        {% for alert in active_alerts %}
+        <div class="sketch-border bg-red-500 text-white p-4 mb-2 flex justify-between items-center shadow-lg animate-pulse" data-alert-id="{{ alert.id }}">
+            <span class="handwritten text-lg font-bold">🚨 Emergency: {{ alert.patient.username }} needs you — {{ alert.created_at|time:"h:i A" }}</span>
+            <button onclick="resolveAlert(this)" type="button" class="sketch-border bg-white text-red-600 px-3 py-1 handwritten font-bold cursor-pointer">I've Responded</button>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Quick Stats Bar -->
+    <div class="flex flex-wrap justify-center gap-6 mb-10">
+        <div class="sketch-border bg-white dark:bg-slate-800 dark:text-white p-4 text-center min-w-[200px] shadow-md">
+            <span class="handwritten text-2xl font-bold">Total Patients: {{ total_patients|default:0 }} 👥</span>
+        </div>
+        <div class="sketch-border bg-sky-100 dark:bg-slate-700 text-sky-900 dark:text-sky-200 p-4 text-center min-w-[200px] shadow-md">
+            <span class="handwritten text-2xl font-bold">Pending Meals: 4 📸</span> 
+        </div>
+        {% if unassigned_patients %}
+        <div class="sketch-border bg-sky-50 dark:bg-slate-700 text-sky-700 dark:text-sky-200 p-4 text-center min-w-[200px] shadow-md">
+            <span class="handwritten text-2xl font-bold">Unassigned: {{ unassigned_patients|length }} 🆕</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Unassigned Patients Section -->
+    {% if unassigned_patients %}
+    <div class="mb-12">
+        <h2 class="text-3xl handwritten text-gray-800 dark:text-sky-300 font-bold mb-4 text-center">
+            Patients Waiting to be Claimed 🙋
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for profile in unassigned_patients %}
+            <div class="bg-sky-50/80 dark:bg-slate-800/90 p-5 sketch-border shadow-md relative">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-100/70 dark:bg-slate-600/50 w-24 h-6 -rotate-2 border border-amber-300/40 pointer-events-none"></div>
+
+                <div class="flex justify-between items-center border-b-2 border-dashed border-gray-300 dark:border-slate-600 pb-2 mb-3">
+                    <h3 class="handwritten text-2xl font-bold text-gray-800 dark:text-sky-300">
+                        {{ profile.user.username }}
+                    </h3>
+                    <span class="text-xs bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 px-2 py-1 sketch-border handwritten font-bold">
+                        Unclaimed 🆕
+                    </span>
+                </div>
+
+                <ul class="handwritten text-base space-y-1 mb-4 text-gray-700 dark:text-gray-200">
+                    <li><strong>Age:</strong> {{ profile.age|default:"--" }}</li>
+                    <li><strong>Weight:</strong> {{ profile.weight|default:"--" }} kg</li>
+                    <li><strong>BP:</strong> {{ profile.blood_pressure|default:"--" }}</li>
+                </ul>
+
+                <form method="post" action="{% url 'assign_patient' profile.user.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full sketch-border bg-sky-200 dark:bg-sky-700 text-sky-950 dark:text-white py-2 handwritten text-lg font-bold hover:bg-sky-300 dark:hover:bg-sky-600 transition-all cursor-pointer">
+                        Add to My Patients ➕
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- My Patients Header -->
+    <h2 class="text-3xl handwritten text-gray-800 dark:text-sky-300 font-bold mb-6 text-center">
+        My Patients 🩺
+    </h2>
+
+    <!-- Patient Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {% for patient in patients %}
+        <div class="bg-white/90 dark:bg-slate-800/90 p-6 sketch-border shadow-lg hover:shadow-2xl transition-all relative">
+            
+            <!-- Scotch Tape Effect -->
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-100/70 dark:bg-slate-600/50 w-24 h-6 -rotate-2 border border-amber-300/40 pointer-events-none"></div>
+
+            <!-- Patient Name Header -->
+            <div class="flex justify-between items-center border-b-2 border-dashed border-gray-300 dark:border-slate-600 pb-2 mb-4">
+                <h3 class="handwritten text-3xl font-bold text-gray-800 dark:text-sky-300">
+                    {{ patient.user.username }}
+                </h3>
+                <span class="text-xs bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 px-2 py-1 sketch-border handwritten font-bold">
+                    Active 🌱
+                </span>
+            </div>
+            
+            <!-- Vitals Baseline -->
+            <ul class="handwritten text-lg space-y-1 mb-4 text-gray-700 dark:text-gray-200">
+                <li><strong>Age:</strong> {{ patient.age|default:"--" }}</li>
+                <li><strong>Weight:</strong> {{ patient.weight|default:"--" }} kg</li>
+                <li><strong>BP:</strong> {{ patient.blood_pressure|default:"--" }}</li>
+            </ul>
+
+            <!-- Macro Status Widget -->
+            <div class="bg-sky-50/80 dark:bg-slate-700/70 p-3 sketch-border-dashed mb-4">
+                <p class="handwritten text-sm text-gray-600 dark:text-gray-300 font-bold mb-1">
+                    Latest Nutrition Track:
+                </p>
+                <div class="flex justify-between items-center px-2 handwritten text-base font-bold">
+                    <span class="text-sky-600 dark:text-sky-400">💧 Fats: {{ patient.fats|default:0 }}g</span>
+                    <span class="text-orange-600 dark:text-orange-400">🔥 Cal: {{ patient.calories|default:0 }}</span>
+                    <span class="text-green-600 dark:text-green-400">🥗 Pro: {{ patient.protein|default:0 }}g</span>
+                </div>
+            </div>
+
+            <!-- Doctor Action Buttons -->
+            <div class="flex flex-col gap-2">
+                <a href="{% url 'patient_dashboard' %}?user={{ patient.user.username }}" class="sketch-border bg-sky-200 dark:bg-sky-600 text-sky-950 dark:text-white text-center py-2 handwritten text-lg font-bold hover:bg-sky-300 dark:hover:bg-sky-500 transition-all">
+                    View Live Dashboard →
+                </a>
+                <div class="flex gap-2">
+                    <button onclick="openDietModal('{{ patient.user.username }}')" type="button" class="flex-1 sketch-border bg-emerald-200 dark:bg-emerald-700 text-emerald-950 dark:text-white py-2 handwritten text-sm font-bold hover:bg-emerald-300 transition-all cursor-pointer">
+                        💬 Diet Plan
+                    </button>
+                    <button onclick="openMedModal('{{ patient.user.username }}')" type="button" class="flex-1 sketch-border bg-sky-200 dark:bg-sky-700 text-sky-950 dark:text-white py-2 handwritten text-sm font-bold hover:bg-sky-300 transition-all cursor-pointer">
+                        💊 Medication
+                    </button>
+                </div>
+                <a href="{% url 'patient_dashboard' %}?user={{ patient.user.username }}#fuel-log" class="sketch-border bg-blue-100 dark:bg-blue-800 text-blue-950 dark:text-white py-2 handwritten text-sm font-bold text-center hover:bg-blue-200 transition-all">
+                    📸 Meal Selfies
+                </a>
+                <form method="post" action="{% url 'unassign_patient' patient.user.id %}" onsubmit="return confirm('Remove {{ patient.user.username }} from your patient list?');">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full sketch-border bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 py-1 handwritten text-xs font-bold hover:bg-red-200 dark:hover:bg-red-800/50 transition-all cursor-pointer">
+                        Remove Patient ✕
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Alert Badge for Unreviewed Updates -->
+            <div class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg animate-pulse sketch-border shadow-md" title="Needs Attention!">
+                !
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12 bg-white/80 dark:bg-slate-800 p-8 sketch-border">
+            <p class="handwritten text-3xl text-gray-600 dark:text-gray-300 italic mb-2">
+                No patients registered yet.
+            </p>
+            <p class="handwritten text-xl text-sky-600 dark:text-sky-400">
+                {% if unassigned_patients %}
+                    Claim a patient above to get started! 🚀
+                {% else %}
+                    Share your journey link to invite your first patient! 🚀
+                {% endif %}
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal for Sending Diet Plan -->
+<div id="dietModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-slate-800 sketch-border p-6 max-w-md w-full relative shadow-2xl">
+        <h3 class="handwritten text-2xl font-bold text-sky-800 dark:text-sky-400 mb-2">
+            Send Diet Plan for <span id="modalPatientName" class="underline"></span> 🥗
+        </h3>
+        <p class="handwritten text-sm text-gray-500 dark:text-gray-300 mb-4 italic">
+            "Write it down to ease it!"
+        </p>
+
+        <form method="post" action="{% url 'send_diet_plan' %}">
+            {% csrf_token %}
+            <input type="hidden" name="patient_username" id="modalPatientInput">
+            <textarea name="diet_note" rows="4" placeholder="e.g. Focus on leafy greens, lentils, and plenty of water today! 🌿" class="w-full p-2 sketch-border handwritten text-gray-800 dark:text-white bg-transparent mb-4 focus:outline-none" required></textarea>
+            
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeDietModal()" class="sketch-border bg-gray-200 dark:bg-slate-700 px-4 py-2 handwritten font-bold text-gray-800 dark:text-gray-200">
+                    Cancel
+                </button>
+                <button type="submit" class="sketch-border bg-sky-400 dark:bg-sky-600 text-white px-4 py-2 handwritten font-bold hover:bg-sky-500 transition-all">
+                    Send Plan 🚀
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal for Sending Medication -->
+<div id="medModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-slate-800 sketch-border p-6 max-w-md w-full relative shadow-2xl">
+        <h3 class="handwritten text-2xl font-bold text-sky-800 dark:text-sky-400 mb-2">
+            Set Medication for <span id="medModalPatientName" class="underline"></span> 💊
+        </h3>
+        <p class="handwritten text-sm text-gray-500 dark:text-gray-300 mb-4 italic">
+            "Clarity here keeps their regimen on track."
+        </p>
+
+        <form method="post" action="{% url 'send_medication' %}">
+            {% csrf_token %}
+            <input type="hidden" name="patient_username" id="medModalPatientInput">
+
+            <label class="handwritten text-sm font-bold text-gray-600 dark:text-gray-300 block mb-1">Drug(s)</label>
+            <textarea name="drug_name" rows="2" placeholder="e.g. Biktarvy (Bictegravir/Emtricitabine/TAF)" class="w-full p-2 sketch-border handwritten text-gray-800 dark:text-white bg-transparent mb-3 focus:outline-none" required></textarea>
+
+            <label class="handwritten text-sm font-bold text-gray-600 dark:text-gray-300 block mb-1">Dosage</label>
+            <textarea name="dosage" rows="2" placeholder="e.g. 1 tablet, once daily, with or without food" class="w-full p-2 sketch-border handwritten text-gray-800 dark:text-white bg-transparent mb-3 focus:outline-none" required></textarea>
+
+            <label class="handwritten text-sm font-bold text-gray-600 dark:text-gray-300 block mb-1">Time (display text)</label>
+            <input type="text" name="time_of_day" placeholder="e.g. 10:00 AM" class="w-full p-2 sketch-border handwritten text-gray-800 dark:text-white bg-transparent mb-3 focus:outline-none">
+
+            <label class="handwritten text-sm font-bold text-gray-600 dark:text-gray-300 block mb-1">Reminder Time (triggers patient notification)</label>
+            <input type="time" name="reminder_time" class="w-full p-2 sketch-border handwritten text-gray-800 dark:text-white bg-transparent mb-3 focus:outline-none">
+
+            <label class="handwritten text-sm font-bold text-gray-600 dark:text-gray-300 block mb-1">Note (optional)</label>
+            <textarea name="medication_notes" rows="2" placeholder="Any additional instructions..." class="w-full p-2 sketch-border handwritten text-gray-800 dark:text-white bg-transparent mb-4 focus:outline-none"></textarea>
+
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeMedModal()" class="sketch-border bg-gray-200 dark:bg-slate-700 px-4 py-2 handwritten font-bold text-gray-800 dark:text-gray-200">
+                    Cancel
+                </button>
+                <button type="submit" class="sketch-border bg-sky-400 dark:bg-sky-600 text-white px-4 py-2 handwritten font-bold hover:bg-sky-500 transition-all">
+                    Save 💊
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .sketch-border-dashed {
+        border: 2px dashed #888;
+        border-radius: 10px;
+    }
+    .dark .sketch-border-dashed {
+        border-color: #64748b;
+    }
+</style>
+
+<script>
+    function openDietModal(patientUsername) {
+        document.getElementById('modalPatientName').innerText = patientUsername;
+        document.getElementById('modalPatientInput').value = patientUsername;
+        document.getElementById('dietModal').classList.remove('hidden');
+    }
+
+    function closeDietModal() {
+        document.getElementById('dietModal').classList.add('hidden');
+    }
+
+    function openMedModal(patientUsername) {
+        document.getElementById('medModalPatientName').innerText = patientUsername;
+        document.getElementById('medModalPatientInput').value = patientUsername;
+        document.getElementById('medModal').classList.remove('hidden');
+    }
+
+    function closeMedModal() {
+        document.getElementById('medModal').classList.add('hidden');
+    }
+
+    if ('Notification' in window) {
+        Notification.requestPermission();
+    }
+
+    function resolveAlert(btn) {
+    const alertId = btn.closest('[data-alert-id]').dataset.alertId;
+    fetch(`/resolve-alert/${alertId}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    }).then(() => location.reload());
+    }
+
+    let knownAlertIds = new Set(
+        Array.from(document.querySelectorAll('[data-alert-id]')).map(el => el.dataset.alertId)
+    );
+
+    setInterval(() => {
+        fetch('/poll-alerts/')
+            .then(res => res.json())
+            .then(data => {
+                if (!data.alerts) return;
+                const currentIds = data.alerts.map(a => String(a.id));
+
+                const newOnes = data.alerts.filter(a => !knownAlertIds.has(String(a.id)));
+                if (newOnes.length > 0) {
+                    newOnes.forEach(a => {
+                        if (Notification.permission === 'granted') {
+                            new Notification("🚨 Emergency Alert", {
+                                body: `${a.patient} needs you — sent at ${a.created_at}`
+                            });
+                        }
+                    });
+                    location.reload();
+                }
+                knownAlertIds = new Set(currentIds);
+            });
+    }, 15000);
+</script>
+{% endblock %}

@@ -1,0 +1,1094 @@
+{% extends 'core/home.html' %}
+{% block title %}ARV Fuel | Patient Dashboard{% endblock %}
+
+{% block content %}
+<!-- Background Texture & Sketch Doodles -->
+<img src="https://www.transparenttextures.com/patterns/handmade-paper.png" class="fixed inset-0 opacity-30 pointer-events-none z-0" alt="Paper texture backdrop">
+<img src="https://openclipart.org/image/400px/336531" class="doodle doodle-1" alt="botanical-sketch">
+<img src="https://openclipart.org/image/400px/216413" class="doodle doodle-2" alt="leaf-sketch">
+
+<div class="relative z-10 max-w-6xl mx-auto grid md:grid-cols-3 gap-8 p-2 md:p-6">
+    <form method="post" action="{% url 'logout' %}" class="fixed top-4 right-4 z-50">
+        {% csrf_token %}
+        <button type="submit" class="sketch-border bg-white/90 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-4 py-2 handwritten text-sm font-bold shadow-md hover:bg-gray-100 dark:hover:bg-slate-700 transition-all cursor-pointer">
+            🚪 Logout
+        </button>
+    </form>
+
+    {% if not is_doctor_view %}
+    <button id="emergency-btn" onclick="triggerEmergency()" type="button" class="fixed top-4 right-32 z-50 sketch-border bg-red-500 text-white px-4 py-2 handwritten text-sm font-bold shadow-md hover:bg-red-600 transition-all cursor-pointer animate-pulse">
+        🚨 Emergency
+    </button>
+    <div id="medication-data"
+        data-has-medication="{% if medication %}1{% else %}0{% endif %}"
+        data-reminder-time="{% if medication.reminder_time %}{{ medication.reminder_time|time:'H:i' }}{% endif %}"
+        data-taken-today="{% if medication_taken_today %}1{% else %}0{% endif %}"
+        data-drug-name="{{ medication.drug_name|default:''|escapejs }}"
+        data-dosage="{{ medication.dosage|default:''|escapejs }}"
+        class="hidden"></div>
+    {% endif %}
+
+    <!-- LEFT SIDEBAR: Baseline, Meds, & Water Tracker -->
+    <div class="space-y-6">
+        <!-- Baseline Credentials Card -->
+        <div class="bg-white/90 dark:bg-slate-800 p-6 sketch-border shadow-lg transition-all">
+            <h3 class="handwritten text-3xl text-orange-800 dark:text-orange-400 font-bold border-b border-orange-200 dark:border-slate-700 pb-2">
+                My Baseline 📋
+            </h3>
+            <ul class="mt-4 space-y-2 dark:text-gray-200 handwritten text-xl">
+                <li><strong>Age:</strong> {{ profile.age|default:"--" }}</li>
+                <li><strong>Weight:</strong> {{ profile.weight|default:"--" }} kg</li>
+                <li><strong>Blood Pressure:</strong> {{ profile.blood_pressure|default:"--" }}</li>
+            </ul>
+        </div>
+
+        <!-- Medication Card (Doctor-Managed) -->
+        <div class="bg-orange-50/90 dark:bg-slate-700/80 p-6 sketch-border transition-all">
+            <h3 class="handwritten text-2xl mb-2 text-gray-800 dark:text-gray-100 font-bold">
+                Medication Time 💊
+            </h3>
+            <p class="text-sm italic handwritten text-orange-700 dark:text-orange-300 mb-3">
+                "Don't forget your strength today!"
+            </p>
+
+            {% if medication %}
+                <div class="space-y-3">
+                    <div>
+                        <p class="handwritten text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-bold mb-1">Drug(s)</p>
+                        <div class="p-3 border-l-4 border-orange-400 bg-white/70 dark:bg-slate-800/70 sketch-border-dashed dark:text-gray-100 font-bold handwritten text-base whitespace-pre-line">
+                            {{ medication.drug_name }}
+                        </div>
+                    </div>
+                    <div>
+                        <p class="handwritten text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-bold mb-1">Dosage</p>
+                        <div class="p-3 border-l-4 border-emerald-400 bg-white/70 dark:bg-slate-800/70 sketch-border-dashed dark:text-gray-100 font-bold handwritten text-base whitespace-pre-line">
+                            {{ medication.dosage }}
+                        </div>
+                    </div>
+                    {% if medication.time_of_day %}
+                    <p class="handwritten text-sm text-gray-600 dark:text-gray-300 font-bold">⏰ {{ medication.time_of_day }}</p>
+                    {% endif %}
+                    {% if medication.notes %}
+                    <div class="pt-2 border-t border-dashed border-gray-300 dark:border-slate-600">
+                        <p class="handwritten text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-bold mb-1">Doctor's Note</p>
+                        <p class="handwritten text-sm text-gray-700 dark:text-gray-200 italic">{{ medication.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="p-3 border-l-4 border-orange-400 bg-white/70 dark:bg-slate-800/70 sketch-border-dashed dark:text-gray-100 handwritten text-base italic text-gray-500 dark:text-gray-400">
+                    No medication plan set yet — your doctor will add your ARV regimen here.
+                </div>
+            {% endif %}
+        {% if medication and not is_doctor_view %}
+        <div class="mt-3">
+            {% if medication_taken_today %}
+                <div class="text-center handwritten text-emerald-600 dark:text-emerald-400 font-bold text-sm">✅ Taken today</div>
+            {% else %}
+                <button onclick="markMedicationTaken()" type="button" class="w-full sketch-border bg-emerald-200 dark:bg-emerald-700 text-emerald-950 dark:text-white py-2 handwritten text-sm font-bold hover:bg-emerald-300 transition-all cursor-pointer">
+                    ✅ Mark as Taken
+                </button>
+            {% endif %}
+        </div>
+    {% endif %}    
+        </div>
+
+        <!-- Animated Water Well -->
+        <div class="bg-white/90 dark:bg-slate-800 p-6 sketch-border shadow-lg relative overflow-hidden transition-all">
+            <h3 class="handwritten text-2xl text-blue-700 dark:text-blue-300 mb-1 text-center font-bold">
+                The Water Well 💧
+            </h3>
+            <p class="text-center text-xs handwritten text-gray-500 dark:text-gray-400 mb-4">
+                "One glass at a time."
+            </p>
+            <div class="relative w-24 h-40 mx-auto border-x-4 border-b-4 border-gray-700 dark:border-gray-300 rounded-b-xl overflow-hidden bg-blue-50/30">
+                <div id="water-level" class="absolute bottom-0 w-full bg-blue-400/70 transition-all duration-700 ease-in-out" style="height: 0%;">
+                    <div class="absolute top-0 w-full h-3 bg-blue-300 blur-xs"></div>
+                </div>
+            </div>
+            <div class="flex justify-between items-center mt-4">
+                {% if not is_doctor_view %}
+                <button onclick="drinkWater()" type="button" aria-label="Log glass of water" class="text-3xl hover:scale-125 transition-transform active:scale-95 cursor-pointer">
+                    💧
+                </button>
+                {% else %}
+                <span class="text-3xl opacity-40">💧</span>
+                {% endif %}
+                <span class="handwritten text-xl font-bold dark:text-white">
+                    <span id="water-count">0</span> / 8 Glasses
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT / MAIN DASHBOARD AREA -->
+    <div class="md:col-span-2 space-y-8">
+        
+        <!-- Daily Nutrition Chart & Insights -->
+        <div class="bg-white/90 dark:bg-slate-800 p-6 md:p-8 sketch-border shadow-2xl transition-all">
+            <h2 class="handwritten text-4xl text-center mb-1 text-gray-800 dark:text-orange-400 font-bold">
+                Daily Nutrition Track 📊
+            </h2>
+            <p class="text-center handwritten text-orange-600 dark:text-orange-300 mb-6 italic">
+                "Your daily strength map!"
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-6 items-center">
+                <div class="relative h-[220px] w-full flex items-center justify-center">
+                    <canvas id="nutritionChart"></canvas>
+                </div>
+                
+                <div id="nutrient-insights" class="p-4 sketch-border bg-orange-50/80 dark:bg-slate-700/80 handwritten text-base dark:text-gray-200">
+                    <h4 class="text-lg font-bold underline mb-2 text-orange-800 dark:text-orange-300">Fuel Status ⚡</h4>
+                    <p id="insight-text" class="italic">Analyzing your intake...</p>
+                    <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                        *Calculated live from today's meal logs.
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-2 text-center handwritten text-lg font-bold pt-4 border-t border-gray-200 dark:border-slate-700">
+                <span class="text-blue-600 dark:text-blue-400">💧 Fats: {{ fats|default:0 }}g</span>
+                <span class="text-emerald-600 dark:text-emerald-400">🥗 Protein: {{ protein|default:0 }}g</span>
+                <span class="text-amber-600 dark:text-amber-400">🌾 Carbs: <span id="carbs-display">0</span>g</span>
+                <span class="text-orange-600 dark:text-orange-400">🔥 Calories: {{ calories|default:0 }}</span>
+            </div>
+        </div>
+
+        <!-- Doctor's Note & Meal Upload -->
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white/90 dark:bg-slate-800 p-6 sketch-border transition-all flex flex-col justify-between">
+                <div>
+                    <h4 class="handwritten text-2xl mb-2 text-orange-800 dark:text-orange-400 font-bold">
+                        Doctor's Diet Plan 🩺
+                    </h4>
+                    {% if not profile.doctor %}
+                        <p class="text-gray-500 dark:text-gray-400 italic handwritten text-lg">
+                            "No doctor assigned yet — once a doctor adds you to their patient list, their notes will appear here! 🌱"
+                        </p>
+                    {% elif plan %}
+                        <p class="text-gray-700 dark:text-gray-300 italic handwritten text-lg">
+                            {{ plan.meal_plan|linebreaksbr }}
+                        </p>
+                    {% else %}
+                        <p class="text-gray-700 dark:text-gray-300 italic handwritten text-lg">
+                            "Focus on greens, lean protein, and healthy fats today!"
+                        </p>
+                    {% endif %}
+                </div>
+                {% if profile.doctor and plan and plan.grocery_list %}
+                    <div class="mt-4 pt-3 border-t border-dashed border-gray-300 dark:border-slate-600">
+                        <h5 class="handwritten text-lg font-bold text-emerald-700 dark:text-emerald-400">🛒 Recommended Grocery List:</h5>
+                        <p class="text-sm handwritten text-gray-600 dark:text-gray-300">{{ plan.grocery_list }}</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if not is_doctor_view %}
+            <div class="bg-white/90 dark:bg-slate-800 p-6 sketch-border flex flex-col justify-center transition-all">
+                <form id="mealForm" method="post" enctype="multipart/form-data" action="{% url 'upload_meal' %}">
+                    {% csrf_token %}
+                    <textarea id="meal_description" name="description" placeholder="Journal your meal here... (e.g., 2 Chapatis, Dal, and Salad)" class="w-full p-2 mb-3 sketch-border handwritten text-gray-800 dark:text-white bg-transparent focus:outline-none" rows="2" required></textarea>
+                    
+                    <input type="file" name="meal_image" id="meal_input" accept="image/*" capture="camera" class="hidden" onchange="handleMealUpload()">
+                    
+                    <div class="flex gap-2">
+                        <button type="button" onclick="document.getElementById('meal_input').click()" class="handwritten text-lg bg-amber-200 dark:bg-amber-600 text-amber-950 dark:text-white px-3 py-2 sketch-border hover:bg-amber-300 dark:hover:bg-amber-500 font-bold transition-all cursor-pointer flex-1 text-center">
+                            📷 Attach Photo
+                        </button>
+                        <button type="submit" class="handwritten text-lg bg-orange-300 dark:bg-orange-600 text-orange-950 dark:text-white px-3 py-2 sketch-border hover:bg-orange-400 dark:hover:bg-orange-500 font-bold transition-all cursor-pointer flex-1 text-center">
+                            🚀 Log Meal
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% else %}
+            <div class="bg-white/90 dark:bg-slate-800 p-6 sketch-border flex flex-col items-center justify-center text-center transition-all">
+                <p class="handwritten text-lg text-gray-500 dark:text-gray-400 italic">👁️ Viewing only — meal logging is managed by the patient.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Fuel Log Gallery with Delete Actions -->
+        <div id="fuel-log" class="bg-white/80 dark:bg-slate-800 p-6 sketch-border transition-all">
+            <h3 class="handwritten text-2xl mb-4 dark:text-white font-bold">
+                Recent Fuel Log 📸
+            </h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {% for meal in meals %}
+                    <div class="sketch-border p-2 bg-white dark:bg-slate-700 relative group flex flex-col justify-between">
+                        <div>
+                            {% if meal.image %}
+                                <img src="{{ meal.image.url }}" alt="Logged Meal Image" class="w-full h-28 object-cover rounded-sm">
+                            {% else %}
+                                <div class="w-full h-28 bg-orange-100 dark:bg-slate-600 flex items-center justify-center rounded-sm">
+                                    <span class="text-4xl">🥗</span>
+                                </div>
+                            {% endif %}
+                            
+                            <p class="text-xs mt-2 text-gray-600 dark:text-gray-300 handwritten font-bold truncate">
+                                {{ meal.description|default:"Meal Log" }}
+                            </p>
+                            
+                            <div class="flex items-center justify-between mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+                                <span>{{ meal.timestamp|date:"M d, H:i" }}</span>
+                                <span class="text-orange-600 dark:text-orange-300 font-bold">{{ meal.calories|floatformat:0 }} kcal</span>
+                            </div>
+                        </div>
+
+                        <!-- Meal Delete Form Button -->
+                        {% if not is_doctor_view %}
+                        <form method="post" action="{% url 'delete_meal' meal.id %}" onsubmit="return confirm('Delete this meal entry? Your daily totals will update immediately.');" class="mt-2 border-t border-gray-100 dark:border-slate-600 pt-1">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full text-center text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 font-bold handwritten transition-colors cursor-pointer py-0.5">
+                                ✕ Delete
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <div class="col-span-full text-center py-6">
+                        <p class="handwritten text-xl text-gray-500 dark:text-gray-400 italic">
+                            No meals logged yet today. Write it down to ease it! 🥗
+                        </p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mindful Buddy AI Chat Widget Drawer -->
+<div id="ai-chat-container" class="hidden fixed bottom-6 right-6 w-80 md:w-88 bg-white dark:bg-slate-800 sketch-border shadow-2xl p-4 transition-all z-50 flex flex-col">
+    <div class="flex justify-between items-center border-b-2 border-orange-200 dark:border-slate-700 pb-2 mb-3 flex-shrink-0">
+        <h4 class="handwritten text-2xl font-bold text-orange-800 dark:text-orange-400">Mindful Buddy AI 🧠</h4>
+        <div class="flex items-center gap-3">
+            <button id="ai-chat-expand-btn" onclick="toggleAIChatExpand()" type="button" aria-label="Expand Chat" class="text-orange-600 dark:text-orange-300 font-bold text-lg hover:scale-125 transition-transform cursor-pointer">⛶</button>
+            <button onclick="toggleAIChat()" type="button" aria-label="Close Chat" class="text-red-500 font-bold text-xl hover:scale-125 transition-transform cursor-pointer">✕</button>
+        </div>
+    </div>
+    <div id="chat-box" class="flex-1 min-h-0 overflow-y-auto mb-3 text-sm p-2 bg-orange-50/50 dark:bg-slate-700/50 sketch-border-dashed space-y-2">
+        <div class="ai-msg text-left text-orange-900 dark:text-orange-200 handwritten">
+            <b>Buddy:</b> Hi! I'm here to support your mental and physical health today. How are you feeling right now?
+        </div>
+    </div>
+    <div class="flex gap-2 flex-shrink-0">
+        <input type="text" id="chat-input" placeholder="Express your thoughts here..." class="w-full p-2 text-sm sketch-border bg-transparent handwritten dark:text-white focus:outline-none">
+        <button onclick="sendChatMessage()" type="button" class="sketch-border bg-orange-300 dark:bg-orange-600 p-2 handwritten font-bold cursor-pointer">Send</button>
+    </div>
+</div>
+
+{% if not is_doctor_view %}
+<!-- Sudoku Game Modal -->
+<div id="sudoku-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-slate-800 sketch-border p-6 max-w-md w-full relative shadow-2xl">
+        <div class="flex justify-between items-center border-b-2 border-indigo-200 dark:border-slate-700 pb-2 mb-3">
+            <h4 class="handwritten text-2xl font-bold text-indigo-800 dark:text-indigo-400">Sudoku Break 🧩</h4>
+            <button onclick="toggleSudoku()" type="button" aria-label="Close Sudoku" class="text-red-500 font-bold text-xl hover:scale-125 transition-transform cursor-pointer">✕</button>
+        </div>
+
+        <div class="flex justify-between items-center mb-2">
+            <div id="sudoku-hearts" class="text-2xl leading-none">❤️❤️❤️❤️</div>
+            <span id="sudoku-timer" class="handwritten text-lg font-bold text-indigo-600 dark:text-indigo-300">⏱️ 0:00</span>
+        </div>
+
+        <p class="handwritten text-sm text-gray-500 dark:text-gray-300 mb-3 italic text-center">
+            "A little puzzle for a little calm."
+        </p>
+
+        <div id="sudoku-grid" class="sudoku-grid mx-auto mb-3"></div>
+
+        <p id="sudoku-message" class="handwritten text-center text-sm min-h-[1.5rem] mb-2 text-indigo-700 dark:text-indigo-300 font-bold"></p>
+
+        <div class="flex gap-2">
+            <button id="sudoku-hint-btn" onclick="hintSudoku()" type="button" class="flex-1 sketch-border bg-blue-200 dark:bg-blue-700 text-blue-950 dark:text-white py-2 handwritten text-sm font-bold hover:bg-blue-300 transition-all cursor-pointer">
+                💡 Hint (4)
+            </button>
+            <button onclick="newSudoku()" type="button" class="flex-1 sketch-border bg-orange-200 dark:bg-orange-600 text-orange-950 dark:text-white py-2 handwritten text-sm font-bold hover:bg-orange-300 transition-all cursor-pointer">
+                🔄 New
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Floating Buddy Button -->
+<button onclick="toggleAIChat()" type="button" class="fixed bottom-8 right-8 bg-orange-400 dark:bg-orange-600 text-white p-4 rounded-full sketch-border shadow-2xl hover:scale-110 transition-transform z-40 cursor-pointer font-bold handwritten text-lg">
+    🧠 Your Buddy Here!
+</button>
+
+{% if not is_doctor_view %}
+<!-- Floating Sudoku Button -->
+<button onclick="toggleSudoku()" type="button" class="fixed bottom-8 left-8 bg-indigo-400 dark:bg-indigo-600 text-white p-4 rounded-full sketch-border shadow-2xl hover:scale-110 transition-transform z-40 cursor-pointer font-bold handwritten text-lg">
+    🧩 Sudoku Break!
+</button>
+{% endif %}
+
+<style>
+    /* Doodles Positioning */
+    .doodle {
+        position: absolute;
+        opacity: 0.12;
+        pointer-events: none;
+        z-index: 0;
+        filter: sepia(0.8) hue-rotate(10deg);
+    }
+    .doodle-1 { top: 5%; left: 2%; width: 180px; transform: rotate(-10deg); }
+    .doodle-2 { bottom: 5%; right: 2%; width: 220px; transform: rotate(15deg); }
+
+    /* Chat Styling */
+    #chat-box div { padding: 8px 12px; border-radius: 12px; max-width: 85%; }
+    .user-msg { background-color: #fef3c7; color: #78350f; margin-left: auto; border: 1.5px solid #f59e0b; }
+    .ai-msg { background-color: #ffffff; color: #1e293b; margin-right: auto; border: 1.5px solid #333; }
+    .dark .ai-msg { background-color: #334155; color: #f8fafc; border-color: #94a3b8; }
+    .sketch-border-dashed { border: 2px dashed #888; border-radius: 8px; }
+
+    /* Chat Expand Toggle */
+    #ai-chat-container { height: 380px; }
+    #ai-chat-container.chat-expanded {
+        width: min(90vw, 640px) !important;
+        height: min(85vh, 720px) !important;
+    }
+
+    /* Sudoku Styling */
+    .sudoku-grid {
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        width: 315px;
+        max-width: 100%;
+        border: 3px solid #333;
+        background: #fff;
+    }
+    .dark .sudoku-grid { background: #1e293b; border-color: #94a3b8; }
+    .sudoku-cell {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        text-align: center;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: bold;
+        border: 1px solid #999;
+        background: transparent;
+        color: #1e293b;
+        padding: 0;
+    }
+    .dark .sudoku-cell { color: #f8fafc; border-color: #64748b; }
+    .sudoku-cell:focus { outline: none; background: #fef3c7; }
+    .dark .sudoku-cell:focus { background: #334155; }
+    .sudoku-cell.clue { background: #f3f4f6; color: #111827; cursor: default; }
+    .dark .sudoku-cell.clue { background: #0f172a; color: #e2e8f0; }
+    .sudoku-cell.hint-cell { color: #2563eb; background: #eff6ff; }
+    .dark .sudoku-cell.hint-cell { color: #93c5fd; background: #1e3a5f; }
+    .sudoku-cell.correct-cell { color: #16a34a; }
+    .sudoku-cell.wrong-cell { color: #dc2626; background: #fee2e2; }
+    .dark .sudoku-cell.wrong-cell { background: #450a0a; }
+    .sudoku-cell.thick-right { border-right: 3px solid #333; }
+    .dark .sudoku-cell.thick-right { border-right-color: #94a3b8; }
+    .sudoku-cell.thick-bottom { border-bottom: 3px solid #333; }
+    .dark .sudoku-cell.thick-bottom { border-bottom-color: #94a3b8; }
+    /* Sudoku Shake/Flash Feedback */
+    .sudoku-grid.shake { animation: sudokuShake 0.4s; }
+    .sudoku-grid.flash-red { border-color: #dc2626 !important; box-shadow: 0 0 0 4px rgba(220,38,38,0.3); }
+    .dark .sudoku-grid.flash-red { border-color: #f87171 !important; box-shadow: 0 0 0 4px rgba(248,113,113,0.3); }
+    @keyframes sudokuShake {
+        10%, 90% { transform: translateX(-4px); }
+        20%, 80% { transform: translateX(4px); }
+        30%, 50%, 70% { transform: translateX(-8px); }
+        40%, 60% { transform: translateX(8px); }
+    }
+    .sudoku-cell.locked-cell { opacity: 0.6; cursor: default; }
+</style>
+
+<!-- Chart JS Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Extract values safely from Django context
+        const rawFats = parseFloat("{{ fats|default:0 }}".replace(',', '.')) || 0; 
+        const rawCalories = parseFloat("{{ calories|default:0 }}".replace(',', '.')) || 0;
+        const rawProtein = parseFloat("{{ protein|default:0 }}".replace(',', '.')) || 0;
+
+        // 2. Convert to Caloric Energy (Fats: 9 kcal/g, Protein: 4 kcal/g)
+        const fatCal = rawFats * 9;
+        const protCal = rawProtein * 4;
+        
+        // Remaining calories assigned to Carbs
+        const carbCal = Math.max(0, rawCalories - (fatCal + protCal));
+        const rawCarbs = (carbCal / 4).toFixed(1);
+
+        // Update Carbs Display
+        const carbsElem = document.getElementById('carbs-display');
+        if (carbsElem) carbsElem.innerText = rawCarbs;
+
+        // Default fallback slice data if empty
+        const chartData = (rawCalories === 0 && rawFats === 0 && rawProtein === 0) 
+            ? [1, 1, 1] 
+            : [fatCal, protCal, carbCal];
+
+        // 3. Initialize Chart.js Doughnut Chart
+        const ctx = document.getElementById('nutritionChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Fats (kcal)', 'Protein (kcal)', 'Carbs (kcal)'],
+                datasets: [{
+                    data: chartData, 
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.85)',  // Blue - Fats
+                        'rgba(75, 192, 192, 0.85)',  // Emerald Green - Protein
+                        'rgba(255, 206, 86, 0.85)'   // Amber Yellow - Carbs
+                    ],
+                    borderColor: '#333',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (rawCalories === 0) return ' No food logged today';
+                                const value = context.raw || 0;
+                                const percentage = ((value / rawCalories) * 100).toFixed(1);
+                                return ` ${context.label}: ${value.toFixed(0)} kcal (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                animation: { animateRotate: true, duration: 1200 }
+            }
+        });
+
+        // 4. Dynamic Insights Logic
+        const insightElement = document.getElementById('insight-text');
+        if (insightElement) {
+            if (rawCalories === 0) {
+                insightElement.innerText = "Ready to log your first meal? Take a picture or write it down to start tracking!";
+            } else if (protCal >= fatCal && protCal >= carbCal) {
+                insightElement.innerText = "Protein is your primary fuel today! Great for maintaining strength and immune power.";
+            } else if (fatCal >= protCal && fatCal >= carbCal) {
+                insightElement.innerText = "Healthy fats are leading. This provides steady energy throughout your day.";
+            } else {
+                insightElement.innerText = "Energy levels are rising! Great job keeping your fuel balanced.";
+            }
+        }
+
+        // 5. Hydration Storage Key (Reset per day)
+        const todayKey = 'water_count_' + new Date().toISOString().split('T')[0];
+        let glasses = parseInt(localStorage.getItem(todayKey) || '0', 10);
+        updateWaterUI();
+
+        window.drinkWater = function() {
+            if (glasses < 12) {
+                glasses++;
+                localStorage.setItem(todayKey, glasses.toString());
+                updateWaterUI();
+            }
+        };
+
+        function updateWaterUI() {
+            const countElem = document.getElementById('water-count');
+            const levelElem = document.getElementById('water-level');
+            if (countElem) countElem.innerText = glasses;
+            if (levelElem) {
+                const fillPercent = Math.min(100, (glasses / 8) * 100);
+                levelElem.style.height = fillPercent + '%';
+            }
+        }
+    });
+
+    // 6. Meal Upload Helper
+    function handleMealUpload() {
+        const fileInput = document.getElementById('meal_input');
+        const descInput = document.getElementById('meal_description');
+        const form = document.getElementById('mealForm');
+
+        if (fileInput.files && fileInput.files[0]) {
+            if (!descInput.value.trim()) {
+                descInput.value = "Photo Meal Log";
+            }
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Uploading...";
+            }
+            form.submit();
+        }
+    }
+
+    // 7. Mindful Buddy AI Chat Functions
+    const chatInput = document.getElementById('chat-input');
+    const chatBox = document.getElementById('chat-box');
+
+    function toggleAIChat() {
+        document.getElementById('ai-chat-container').classList.toggle('hidden');
+    }
+
+    function toggleAIChatExpand() {
+        const container = document.getElementById('ai-chat-container');
+        const btn = document.getElementById('ai-chat-expand-btn');
+        const expanded = container.classList.toggle('chat-expanded');
+        btn.textContent = expanded ? '⤡' : '⛶';
+        btn.setAttribute('aria-label', expanded ? 'Restore Chat' : 'Expand Chat');
+    }
+
+    function sendChatMessage() {
+        const msg = chatInput.value.trim();
+        if (!msg) return;
+
+        chatBox.innerHTML += `<div class="user-msg text-right handwritten"><b>You:</b> ${escapeHTML(msg)}</div>`;
+        chatInput.value = '';
+
+        const thinking = document.createElement('div');
+        thinking.id = "thinking-bubble";
+        thinking.innerText = "Buddy is thinking...";
+        thinking.className = "ai-msg text-xs italic handwritten";
+        chatBox.appendChild(thinking);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Form URL Encoded payload format so request.POST / request.GET parses properly in views.py
+        const payload = new URLSearchParams();
+        payload.append('message', msg);
+
+        fetch('/ai-chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: payload.toString()
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Network error");
+            return res.json();
+        })
+        .then(data => {
+            const bubble = document.getElementById('thinking-bubble');
+            if (bubble) chatBox.removeChild(bubble);
+            chatBox.innerHTML += `<div class="ai-msg text-left handwritten"><b>Buddy:</b> ${escapeHTML(data.reply)}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        })
+        .catch(() => {
+            const bubble = document.getElementById('thinking-bubble');
+            if (bubble) chatBox.removeChild(bubble);
+            chatBox.innerHTML += `<div class="ai-msg text-left handwritten text-red-500"><b>Buddy:</b> I'm here for you! Let's talk again in a moment.</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    }
+
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+        );
+    }
+
+    // 8. Sudoku Game Logic
+    const SUDOKU_STORAGE_KEY = 'sudoku_state';
+    const MAX_SUDOKU_HINTS = 4;
+    const MAX_SUDOKU_HEARTS = 4;
+    let sudokuState = null;
+    let sudokuTimerInterval = null;
+
+    function shuffleArr(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function isSafeSudoku(grid, row, col, num) {
+        for (let x = 0; x < 9; x++) {
+            if (grid[row][x] === num || grid[x][col] === num) return false;
+        }
+        const startRow = row - (row % 3), startCol = col - (col % 3);
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (grid[startRow + i][startCol + j] === num) return false;
+            }
+        }
+        return true;
+    }
+
+    function fillSudokuGrid(grid) {
+        for (let row = 0; row < 9; row++) {
+            for (let col = 0; col < 9; col++) {
+                if (grid[row][col] === 0) {
+                    const nums = shuffleArr([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+                    for (const num of nums) {
+                        if (isSafeSudoku(grid, row, col, num)) {
+                            grid[row][col] = num;
+                            if (fillSudokuGrid(grid)) return true;
+                            grid[row][col] = 0;
+                        }
+                    }
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    function generateSudokuPuzzle(cellsToRemove = 45) {
+        const solution = Array.from({ length: 9 }, () => Array(9).fill(0));
+        fillSudokuGrid(solution);
+
+        const puzzle = solution.map(row => row.slice());
+        const cells = [];
+        for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) cells.push([r, c]);
+        shuffleArr(cells);
+
+        for (let i = 0; i < cellsToRemove && i < cells.length; i++) {
+            const [r, c] = cells[i];
+            puzzle[r][c] = 0;
+        }
+        return { puzzle, solution };
+    }
+
+    function loadSudokuState() {
+        try {
+            const saved = localStorage.getItem(SUDOKU_STORAGE_KEY);
+            if (saved) return JSON.parse(saved);
+        } catch (e) {
+            console.error('Sudoku load error:', e);
+        }
+        return null;
+    }
+
+    function saveSudokuState() {
+        try {
+            localStorage.setItem(SUDOKU_STORAGE_KEY, JSON.stringify(sudokuState));
+        } catch (e) {
+            console.error('Sudoku save error:', e);
+        }
+    }
+
+    function currentElapsedSeconds() {
+        let total = sudokuState.elapsedSeconds || 0;
+        if (sudokuState.sessionStart) {
+            total += Math.floor((Date.now() - sudokuState.sessionStart) / 1000);
+        }
+        return total;
+    }
+
+    function formatTime(totalSeconds) {
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function updateSudokuTimerDisplay() {
+        const timerEl = document.getElementById('sudoku-timer');
+        if (timerEl && sudokuState) {
+            timerEl.textContent = `⏱️ ${formatTime(currentElapsedSeconds())}`;
+        }
+    }
+
+    function startSudokuTimer() {
+        stopSudokuTimer();
+        sudokuTimerInterval = setInterval(updateSudokuTimerDisplay, 1000);
+    }
+
+    function stopSudokuTimer() {
+        if (sudokuTimerInterval) {
+            clearInterval(sudokuTimerInterval);
+            sudokuTimerInterval = null;
+        }
+    }
+
+    function calculateWinScore(elapsedSeconds, hintsUsed, heartsLost) {
+        // Base 1000, -2/sec, -75/hint, -50/heart lost along the way. Floor of 50.
+        const score = 1000 - (elapsedSeconds * 2) - (hintsUsed * 75) - (heartsLost * 50);
+        return Math.max(50, score);
+    }
+
+    function calculateGameOverScore(progressRatio, elapsedSeconds, hintsUsed) {
+        // Reward how much was correctly solved before running out of hearts.
+        const base = Math.round(progressRatio * 600);
+        const score = base - elapsedSeconds - (hintsUsed * 40);
+        return Math.max(0, score);
+    }
+
+    function renderHearts() {
+        const heartsEl = document.getElementById('sudoku-hearts');
+        if (!heartsEl || !sudokuState) return;
+        const lost = sudokuState.heartsLost || 0;
+        let html = '';
+        for (let i = 0; i < MAX_SUDOKU_HEARTS; i++) {
+            html += i < (MAX_SUDOKU_HEARTS - lost) ? '❤️' : '🤍';
+        }
+        heartsEl.textContent = html;
+    }
+
+    function updateHintButtonState() {
+        const hintBtn = document.getElementById('sudoku-hint-btn');
+        if (!hintBtn || !sudokuState) return;
+        const used = sudokuState.hintsUsed || 0;
+        const remaining = MAX_SUDOKU_HINTS - used;
+        const locked = !!sudokuState.solvedAt || !!sudokuState.gameOver;
+        hintBtn.textContent = `💡 Hint (${remaining})`;
+        hintBtn.disabled = remaining <= 0 || locked;
+        hintBtn.classList.toggle('opacity-50', remaining <= 0 || locked);
+        hintBtn.classList.toggle('cursor-not-allowed', remaining <= 0 || locked);
+    }
+
+    function renderSudoku() {
+        const gridEl = document.getElementById('sudoku-grid');
+        gridEl.innerHTML = '';
+        const locked = !!sudokuState.solvedAt || !!sudokuState.gameOver;
+
+        for (let r = 0; r < 9; r++) {
+            for (let c = 0; c < 9; c++) {
+                const isClue = sudokuState.puzzle[r][c] !== 0;
+                const isHint = sudokuState.hints && sudokuState.hints[r][c];
+                const cell = document.createElement('input');
+                cell.type = 'text';
+                cell.maxLength = 1;
+                cell.inputMode = 'numeric';
+                cell.dataset.row = r;
+                cell.dataset.col = c;
+
+                let classes = 'sudoku-cell';
+                if ((c + 1) % 3 === 0 && c !== 8) classes += ' thick-right';
+                if ((r + 1) % 3 === 0 && r !== 8) classes += ' thick-bottom';
+
+                if (isClue) {
+                    cell.value = sudokuState.puzzle[r][c];
+                    cell.readOnly = true;
+                    classes += ' clue';
+                } else if (isHint) {
+                    cell.value = sudokuState.entries[r][c];
+                    cell.readOnly = true;
+                    classes += ' hint-cell';
+                } else {
+                    cell.value = sudokuState.entries[r][c] || '';
+                    cell.readOnly = locked;
+                    if (!locked) {
+                        cell.addEventListener('input', onSudokuCellInput);
+                    } else {
+                        classes += ' locked-cell';
+                    }
+                }
+
+                cell.className = classes;
+                gridEl.appendChild(cell);
+            }
+        }
+        renderHearts();
+        updateHintButtonState();
+        updateSudokuTimerDisplay();
+    }
+
+    function isPuzzleComplete() {
+        for (let r = 0; r < 9; r++) {
+            for (let c = 0; c < 9; c++) {
+                if (sudokuState.puzzle[r][c] !== 0) continue;
+                if (sudokuState.entries[r][c] !== sudokuState.solution[r][c]) return false;
+            }
+        }
+        return true;
+    }
+
+    function triggerSudokuShake() {
+        const gridEl = document.getElementById('sudoku-grid');
+        if (!gridEl) return;
+        gridEl.classList.remove('shake', 'flash-red');
+        void gridEl.offsetWidth; // force reflow so the animation can restart
+        gridEl.classList.add('shake', 'flash-red');
+        setTimeout(() => gridEl.classList.remove('shake', 'flash-red'), 450);
+    }
+
+    function onSudokuCellInput(e) {
+        if (sudokuState.solvedAt || sudokuState.gameOver) return;
+
+        const r = parseInt(e.target.dataset.row, 10);
+        const c = parseInt(e.target.dataset.col, 10);
+        let val = e.target.value.replace(/[^1-9]/g, '');
+        e.target.value = val;
+        e.target.classList.remove('correct-cell', 'wrong-cell');
+
+        if (!val) {
+            sudokuState.entries[r][c] = 0;
+            saveSudokuState();
+            return;
+        }
+
+        const num = parseInt(val, 10);
+        sudokuState.entries[r][c] = num;
+
+        if (num === sudokuState.solution[r][c]) {
+            e.target.classList.add('correct-cell');
+            saveSudokuState();
+            if (isPuzzleComplete()) {
+                finishSudoku();
+            }
+            return;
+        }
+
+        // Wrong entry: lose a heart, shake + flash the board, then clear the cell.
+        e.target.classList.add('wrong-cell');
+        sudokuState.heartsLost = (sudokuState.heartsLost || 0) + 1;
+        saveSudokuState();
+        renderHearts();
+        triggerSudokuShake();
+
+        const heartsLostNow = sudokuState.heartsLost;
+        setTimeout(() => {
+            sudokuState.entries[r][c] = 0;
+            e.target.value = '';
+            e.target.classList.remove('wrong-cell');
+            saveSudokuState();
+
+            if (heartsLostNow >= MAX_SUDOKU_HEARTS) {
+                gameOverSudoku();
+            }
+        }, 550);
+    }
+
+    function finishSudoku() {
+        stopSudokuTimer();
+        const finalElapsed = currentElapsedSeconds();
+        sudokuState.elapsedSeconds = finalElapsed;
+        sudokuState.sessionStart = null;
+        sudokuState.solvedAt = Date.now();
+        const score = calculateWinScore(finalElapsed, sudokuState.hintsUsed || 0, sudokuState.heartsLost || 0);
+        sudokuState.lastScore = score;
+        saveSudokuState();
+        renderSudoku();
+
+        const messageEl = document.getElementById('sudoku-message');
+        messageEl.innerHTML = `🎉 Solved in ${formatTime(finalElapsed)}! Score: <span class="text-emerald-600 dark:text-emerald-400">${score}</span> pts`;
+    }
+
+    function gameOverSudoku() {
+        stopSudokuTimer();
+        const finalElapsed = currentElapsedSeconds();
+        sudokuState.elapsedSeconds = finalElapsed;
+        sudokuState.sessionStart = null;
+        sudokuState.gameOver = true;
+
+        let correctCount = 0, totalEditable = 0;
+        for (let r = 0; r < 9; r++) {
+            for (let c = 0; c < 9; c++) {
+                if (sudokuState.puzzle[r][c] !== 0) continue;
+                totalEditable++;
+                if (sudokuState.entries[r][c] === sudokuState.solution[r][c]) correctCount++;
+            }
+        }
+        const progressRatio = totalEditable > 0 ? correctCount / totalEditable : 0;
+        const score = calculateGameOverScore(progressRatio, finalElapsed, sudokuState.hintsUsed || 0);
+        sudokuState.lastScore = score;
+        saveSudokuState();
+        renderSudoku();
+
+        const messageEl = document.getElementById('sudoku-message');
+        messageEl.innerHTML = `💔 Out of hearts! ${Math.round(progressRatio * 100)}% solved in ${formatTime(finalElapsed)}. Score: <span class="text-red-500">${score}</span> pts`;
+    }
+
+    function hintSudoku() {
+        if (sudokuState.solvedAt || sudokuState.gameOver) return;
+
+        const used = sudokuState.hintsUsed || 0;
+        const messageEl = document.getElementById('sudoku-message');
+
+        if (used >= MAX_SUDOKU_HINTS) {
+            messageEl.textContent = "No hints left — you've got this! 💪";
+            return;
+        }
+
+        if (!sudokuState.hints) {
+            sudokuState.hints = Array.from({ length: 9 }, () => Array(9).fill(false));
+        }
+
+        const emptyOrWrong = [];
+        for (let r = 0; r < 9; r++) {
+            for (let c = 0; c < 9; c++) {
+                if (sudokuState.puzzle[r][c] !== 0) continue;
+                if (sudokuState.hints[r][c]) continue;
+                if (sudokuState.entries[r][c] === sudokuState.solution[r][c]) continue;
+                emptyOrWrong.push([r, c]);
+            }
+        }
+
+        if (emptyOrWrong.length === 0) {
+            messageEl.textContent = "No cells left to hint — you're almost done!";
+            return;
+        }
+
+        const [r, c] = emptyOrWrong[Math.floor(Math.random() * emptyOrWrong.length)];
+        sudokuState.entries[r][c] = sudokuState.solution[r][c];
+        sudokuState.hints[r][c] = true;
+        sudokuState.hintsUsed = used + 1;
+        saveSudokuState();
+        renderSudoku();
+        messageEl.textContent = "Here's a little help! 💡";
+
+        if (isPuzzleComplete()) {
+            finishSudoku();
+        }
+    }
+
+    function newSudoku() {
+        const { puzzle, solution } = generateSudokuPuzzle(45);
+        sudokuState = {
+            puzzle,
+            solution,
+            entries: Array.from({ length: 9 }, () => Array(9).fill(0)),
+            hints: Array.from({ length: 9 }, () => Array(9).fill(false)),
+            hintsUsed: 0,
+            heartsLost: 0,
+            elapsedSeconds: 0,
+            sessionStart: Date.now(),
+            solvedAt: null,
+            gameOver: false,
+            lastScore: null,
+        };
+        saveSudokuState();
+        renderSudoku();
+        document.getElementById('sudoku-message').textContent = '';
+        startSudokuTimer();
+    }
+
+    function toggleSudoku() {
+        const modal = document.getElementById('sudoku-modal');
+        const isHidden = modal.classList.contains('hidden');
+        modal.classList.toggle('hidden');
+
+        if (isHidden) {
+            if (!sudokuState) {
+                sudokuState = loadSudokuState();
+            }
+            if (!sudokuState) {
+                newSudoku();
+                return;
+            }
+            renderSudoku();
+
+            if (sudokuState.solvedAt) {
+                document.getElementById('sudoku-message').innerHTML =
+                    `🎉 Solved in ${formatTime(sudokuState.elapsedSeconds)}! Score: <span class="text-emerald-600 dark:text-emerald-400">${sudokuState.lastScore}</span> pts`;
+            } else if (sudokuState.gameOver) {
+                document.getElementById('sudoku-message').innerHTML =
+                    `💔 Game over. Score: <span class="text-red-500">${sudokuState.lastScore}</span> pts`;
+            } else {
+                sudokuState.sessionStart = Date.now();
+                saveSudokuState();
+                startSudokuTimer();
+            }
+        } else {
+            if (sudokuState && !sudokuState.solvedAt && !sudokuState.gameOver) {
+                sudokuState.elapsedSeconds = currentElapsedSeconds();
+                sudokuState.sessionStart = null;
+                saveSudokuState();
+            }
+            stopSudokuTimer();
+        }
+    }
+
+    function markMedicationTaken() {
+    fetch('/mark-medication-taken/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    }).then(() => location.reload());
+}
+
+    function triggerEmergency() {
+    if (!confirm("This will alert your doctor immediately. Continue?")) return;
+
+    const btn = document.getElementById('emergency-btn');
+    if (btn) btn.disabled = true;
+
+    fetch('/emergency-alert/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            alert("Your doctor has been alerted. Help is on the way. 💙");
+        } else if (data.status === 'already_active') {
+            alert(data.message);
+        } else {
+            alert(data.message || "Couldn't send alert — please call your doctor directly.");
+        }
+    })
+    .catch(() => {
+        alert("Something went wrong sending the alert — please call your doctor directly.");
+    })
+    .finally(() => {
+        if (btn) btn.disabled = false;
+    });
+}
+
+       (function() {
+        const dataEl = document.getElementById('medication-data');
+        if (!dataEl || !('Notification' in window)) return;
+
+        Notification.requestPermission().then(function(permission) {
+            if (permission !== 'granted') return;
+
+            const hasMedication = dataEl.dataset.hasMedication === '1';
+            const reminderTime = dataEl.dataset.reminderTime;
+            const takenToday = dataEl.dataset.takenToday === '1';
+            const drugName = dataEl.dataset.drugName;
+            const dosage = dataEl.dataset.dosage;
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            if (!hasMedication) {
+                const noMedKey = 'med_plan_missing_notified';
+                if (!localStorage.getItem(noMedKey)) {
+                    new Notification("No Medication Plan Yet 💊", {
+                        body: "Your doctor hasn't added a regimen yet — check back soon."
+                    });
+                    localStorage.setItem(noMedKey, '1');
+                }
+                return;
+            }
+
+            if (!reminderTime) {
+                const noTimeKey = 'med_reminder_missing_notified_' + todayStr;
+                if (!localStorage.getItem(noTimeKey)) {
+                    new Notification("Medication Time 💊", {
+                        body: "No specific reminder time is set — check your Medication card: " + drugName + ", " + dosage + "."
+                    });
+                    localStorage.setItem(noTimeKey, '1');
+                }
+                return;
+            }
+
+            if (!takenToday) {
+                const todayReminderKey = 'med_reminder_shown_' + todayStr;
+                if (!localStorage.getItem(todayReminderKey)) {
+                    const parts = reminderTime.split(':').map(Number);
+                    const h = parts[0], m = parts[1];
+                    const now = new Date();
+                    const reminder = new Date();
+                    reminder.setHours(h, m, 0, 0);
+
+                    const fireReminder = function() {
+                        new Notification("Medication Pending 💊", {
+                            body: "It's time to take: " + drugName + " — " + dosage
+                        });
+                        localStorage.setItem(todayReminderKey, '1');
+                    };
+
+                    if (now >= reminder) {
+                        fireReminder();
+                    } else {
+                        setTimeout(fireReminder, reminder - now);
+                    }
+                }
+            }
+        });
+    })(); 
+
+
+    chatInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') sendChatMessage();
+    });
+</script>
+{% endblock %}

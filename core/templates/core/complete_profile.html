@@ -1,0 +1,67 @@
+{% extends 'core/home.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white/90 dark:bg-slate-800/90 p-8 sketch-border mt-10 shadow-2xl relative transition-all">
+    <h2 class="text-4xl handwritten text-center mb-2 text-gray-800 dark:text-orange-400 font-bold">
+        Establishing Baseline
+    </h2>
+    <p class="handwritten text-center text-orange-600 dark:text-orange-300 text-lg mb-6 italic">
+        "Let's calibrate your fuel tank."
+    </p>
+    
+    <form method="POST" class="space-y-4">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col">
+                <label class="handwritten text-xl text-gray-700 dark:text-gray-200">Age</label>
+                <input type="number" 
+                       name="age" 
+                       placeholder="21" 
+                       value="{{ form.age.value|default:'' }}"
+                       class="sketch-border p-2 bg-transparent handwritten text-gray-800 dark:text-white" 
+                       required>
+            </div>
+            <div class="flex flex-col">
+                <label class="handwritten text-xl text-gray-700 dark:text-gray-200">Weight (kg)</label>
+                <input type="number" 
+                       step="0.1" 
+                       name="weight" 
+                       placeholder="65.5" 
+                       value="{{ form.weight.value|default:'' }}"
+                       class="sketch-border p-2 bg-transparent handwritten text-gray-800 dark:text-white" 
+                       required>
+            </div>
+        </div>
+
+        <div class="flex flex-col">
+            <label class="handwritten text-xl text-gray-700 dark:text-gray-200">Height (cm)</label>
+            <input type="number" 
+                   name="height" 
+                   placeholder="170" 
+                   value="{{ form.height.value|default:'' }}"
+                   class="sketch-border p-2 bg-transparent handwritten text-gray-800 dark:text-white" 
+                   required>
+        </div>
+
+        <div class="flex flex-col">
+            <label class="handwritten text-xl text-gray-700 dark:text-gray-200">Blood Pressure</label>
+            <!-- Changed 'bp' to 'blood_pressure' to match models.py & forms.py! -->
+            <input type="text" 
+                   name="blood_pressure" 
+                   placeholder="120/80" 
+                   value="{{ form.blood_pressure.value|default:'' }}"
+                   class="sketch-border p-2 bg-transparent handwritten text-gray-800 dark:text-white" 
+                   required>
+        </div>
+
+        <button type="submit" class="w-full sketch-border bg-blue-200 dark:bg-blue-800 dark:text-white p-4 handwritten text-2xl mt-4 hover:bg-blue-300 dark:hover:bg-blue-700 transition-all font-bold">
+            Unlock Dashboard →
+        </button>
+    </form>
+</div>
+
+<style>
+    input:focus { outline: none; }
+</style>
+{% endblock %}

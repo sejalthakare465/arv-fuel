@@ -1,0 +1,138 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARV Fuel | Welcome</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            /* Warm paper texture background */
+            background-color: #fdfaf3;
+            background-image: url("https://www.transparenttextures.com/patterns/paper.png");
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .handwritten {
+            font-family: 'Indie Flower', cursive;
+        }
+        /* Custom "Wobbly" organic sketchbook border */
+        .sketch-border {
+            border: 2.5px solid #333;
+            border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+            box-shadow: 3px 3px 0px #333;
+        }
+        .sketch-border:hover {
+            box-shadow: 4px 4px 0px #333;
+        }
+        
+        /* Dark Mode overrides for Sketch Paper */
+        .dark body {
+            background-color: #0f172a !important;
+            color: #f8fafc;
+        }
+    </style>
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="theme-color" content="#f97316">
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+    });
+}
+    </script>
+</head>
+<body id="main-body" class="p-4 md:p-8">
+
+    <!-- Navigation Bar -->
+    <nav class="flex justify-between items-center py-4 px-8 bg-white/50 dark:bg-slate-800/80 backdrop-blur-md sketch-border mb-10 max-w-5xl mx-auto">
+        <div class="handwritten text-3xl font-bold text-orange-800 dark:text-orange-400">ARV Fuel</div>
+        <div class="flex gap-4 items-center">
+            <button onclick="toggleTheme()" class="p-2 sketch-border bg-white dark:bg-slate-700 hover:bg-gray-100 transition-all cursor-pointer">
+                <span id="theme-icon">🌙</span>
+            </button>
+            <a href="{% url 'login' %}" class="bg-orange-200 hover:bg-orange-300 dark:bg-orange-900/60 dark:text-orange-200 text-orange-900 font-bold py-2 px-5 sketch-border transition-all text-center">
+                Log In
+            </a>
+            <a href="{% url 'register' %}" class="bg-orange-300 hover:bg-orange-400 dark:bg-orange-700 dark:text-white text-orange-900 font-bold py-2 px-5 sketch-border transition-all text-center">
+                Register
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Hero Content -->
+    <main class="max-w-4xl mx-auto space-y-16">
+        {% block content %}
+        <section class="text-center">
+            <h1 class="text-7xl font-bold text-orange-700 dark:text-orange-400 handwritten mb-6">ARV Fuel</h1>
+            <div class="bg-white/60 dark:bg-slate-800/60 p-8 sketch-border shadow-sm">
+                <p class="text-2xl text-gray-800 dark:text-orange-300 leading-relaxed italic handwritten">
+                    "Fueling the body to fight, one meal at a time."
+                </p>
+                <p class="mt-4 text-lg text-gray-700 dark:text-gray-200 leading-relaxed">
+                    Living with HIV requires more than just medicine—it requires a precise nutritional foundation. 
+                    ARV Fuel bridges the gap between you and your nutritionist to ensure your body is strong enough 
+                    to make the most of your Antiretroviral therapy.
+                </p>
+            </div>
+        </section>
+        
+        <!-- Feature Spotlight -->
+        <section class="grid md:grid-cols-2 gap-10 items-center">
+            <div class="space-y-4">
+                <h3 class="text-3xl handwritten text-orange-800 dark:text-orange-400 font-bold">What is ARV Fuel?</h3>
+                <p class="text-gray-700 dark:text-gray-300 leading-relaxed text-lg">
+                    This isn't a cold clinical tool. It's a <strong class="text-orange-800 dark:text-orange-400">digital health journal</strong>. 
+                    We help you track your fats, calories, and proteins through visual sketches, 
+                    remind you of your medication times, and let your doctor see your progress 
+                    live through your meal selfies.
+                </p>
+            </div>
+            <div class="p-6 bg-white/70 dark:bg-slate-800/70 sketch-border flex flex-col items-center">
+                <img src="https://img.freepik.com/premium-vector/danish-smorrebrod-open-faced-sandwich_1253557-77079.jpg" 
+                     alt="Healthy Fuel" 
+                     class="w-full h-auto rounded-lg opacity-90 mix-blend-multiply dark:mix-blend-normal dark:opacity-80">
+                <p class="handwritten mt-3 text-center text-base text-orange-900 dark:text-orange-300 font-bold">
+                    Every meal counts toward your strength.
+                </p>
+            </div>
+        </section>
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-20 py-10 border-t-2 border-orange-200 dark:border-slate-700 text-center">
+        <p class="handwritten text-xl text-gray-600 dark:text-gray-400">
+            Created with care for the HIV Community &copy; 2026
+        </p>
+    </footer>
+
+    <!-- Dark Mode Toggle Script -->
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            
+            html.classList.toggle('dark');
+            
+            if (html.classList.contains('dark')) {
+                icon.innerText = "☀️";
+            } else {
+                icon.innerText = "🌙";
+            }
+        }
+    </script>
+</body>
+</html>

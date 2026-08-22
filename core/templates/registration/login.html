@@ -1,0 +1,44 @@
+{% extends 'core/home.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white/90 dark:bg-slate-800/90 p-8 sketch-border mt-6 shadow-2xl relative transition-all">
+    <h2 class="handwritten text-4xl mb-2 text-center text-orange-600 dark:text-orange-400 font-bold">
+        ARV Fuel Login
+    </h2>
+    <p class="text-center text-gray-700 dark:text-gray-300 mb-6 handwritten text-lg">
+        Ready to track your progress?
+    </p>
+    
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <div>
+            <label class="handwritten text-xl text-gray-800 dark:text-gray-200">Username</label>
+            <input type="text" 
+                   name="username" 
+                   required 
+                   class="w-full p-2 sketch-border bg-transparent text-gray-800 dark:text-white handwritten focus:outline-none focus:ring-2 focus:ring-orange-200">
+        </div>
+        <div>
+            <label class="handwritten text-xl text-gray-800 dark:text-gray-200">Password</label>
+            <input type="password" 
+                   name="password" 
+                   required 
+                   class="w-full p-2 sketch-border bg-transparent text-gray-800 dark:text-white handwritten focus:outline-none focus:ring-2 focus:ring-orange-200">
+        </div>
+        
+        {% if form.errors %}
+            <p class="text-red-500 dark:text-red-400 italic text-sm handwritten">
+                Oops! Incorrect username or password.
+            </p>
+        {% endif %}
+
+        <button type="submit" class="w-full bg-orange-400 dark:bg-orange-600 text-white p-3 sketch-border hover:bg-orange-500 dark:hover:bg-orange-500 transition-colors handwritten text-2xl mt-4 font-bold">
+            Enter Dashboard →
+        </button>
+    </form>
+    
+    <p class="mt-6 text-center handwritten text-lg text-gray-700 dark:text-gray-300">
+        New to ARV Fuel? <a href="{% url 'register' %}" class="text-orange-600 dark:text-orange-400 font-bold underline">Start New Journey</a>
+    </p>
+</div>
+{% endblock %}
