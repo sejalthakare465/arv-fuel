@@ -91,6 +91,10 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+AUTHENTICATION_BACKENDS = [
+    'core.backends.CaseInsensitiveModelBackend',
+    'django.contrib.auth.backends.ModelBackend',  # keep as fallback
+]
 
 
 # Internationalization
