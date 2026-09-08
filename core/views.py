@@ -99,6 +99,7 @@ def register_view(request):
             profile.address = user_address
             profile.save()
             
+            user.backend = 'core.backends.CaseInsensitiveModelBackend'
             login(request, user)
             
             if role == 'doctor':
